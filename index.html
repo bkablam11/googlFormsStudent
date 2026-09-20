@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
+    
+    .card { max-width: 580px; margin: 30px auto; background: #1e293b; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    .timer-container { width: 100%; background: #334155; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 20px; }
+    .timer-bar { height: 100%; width: 100%; background: #22c55e; transition: width 1s linear, background-color 0.3s; }
+    .btn-opt { display: block; width: 100%; padding: 14px; margin: 12px 0; border: 2px solid #334155; background: #0f172a; color: #f8fafc; border-radius: 8px; font-size: 16px; cursor: pointer; text-align: left; transition: all 0.15s ease-in-out; }
+    .btn-opt:hover { background: #334155; }
+    .btn-opt.selected { background: #2563eb !important; border-color: #60a5fa !important; color: white !important; transform: scale(1.02); }
+    .hidden { display: none; }
+    input { width: 100%; padding: 12px; margin: 8px 0 16px; border: 1px solid #475569; background: #0f172a; color: white; border-radius: 6px; font-size: 15px; }
+    button.start-btn { width: 100%; padding: 14px; background: #2563eb; color: white; border: none; font-size: 17px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    button.start-btn:hover { background: #1d4ed8; }
+    button.start-btn:disabled { background: #64748b; cursor: not-allowed; }
+    .header-bar { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 10px; font-size: 16px; color: #94a3b8; }
+    .alert-rule { background: rgba(239, 68, 68, 0.15); border-left: 4px solid #ef4444; padding: 10px; margin-bottom: 15px; font-size: 13px; color: #fca5a5; }
+
+    /* VUE ENSEIGNANT */
+    .admin-container { max-width: 900px; margin: 10px auto; }
+    .control-box { background: #1e293b; padding: 20px; border-radius: 10px; margin-bottom: 25px; border: 1px solid #38bdf8; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px; }
+    .kpi-card { background: #1e293b; padding: 18px; border-radius: 10px; border: 1px solid #334155; text-align: center; }
+    .kpi-value { font-size: 32px; font-weight: bold; color: #38bdf8; margin: 5px 0; }
+    .kpi-title { font-size: 13px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    .q-card { background: #1e293b; border-radius: 10px; padding: 20px; margin-bottom: 20px; border: 1px solid #334155; }
+    .q-header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 15px; }
+    .q-title { font-size: 17px; font-weight: 600; color: #f1f5f9; }
+    .q-badge { background: #0ea5e9; color: white; padding: 3px 10px; border-radius: 12px; font-size: 13px; font-weight: bold; }
+    
+    .bar-row { margin: 12px 0; cursor: pointer; }
+    .bar-label { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; }
+    .bar-bg { background: #0f172a; height: 26px; border-radius: 6px; overflow: hidden; position: relative; }
+    .bar-fill { height: 100%; transition: width 0.8s ease; display: flex; align-items: center; padding-left: 10px; font-size: 12px; font-weight: bold; }
+    .bar-correct { background: #22c55e; color: #ffffff; }
+    .bar-wrong { background: #64748b; color: #ffffff; }
+    
+    .students-tray { display: none; background: #0f172a; border-radius: 6px; padding: 10px; margin-top: 5px; font-size: 13px; border-left: 3px solid #38bdf8; }
+    .students-tray span { display: inline-block; background: #334155; padding: 2px 8px; border-radius: 4px; margin: 3px; font-size: 12px; }
+  </style>
+</head>
+<body oncontextmenu="return false;">
+
+  <!-- ==================== A. VUE ENSEIGNANT (ADMIN) ==================== -->
+  <? if (isAdmin) { ?>
+    <div class="admin-container">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <h2 style="margin:0; color:#38bdf8;">📊 Débriefing Session QCM</h2>
+        <button onclick="location.reload()" style="background:#2563eb; color:white; border:none; padding:8px 15px; border-radius:6px; cursor:pointer; font-weight:bold;">🔄 Rafraîchir</button>
+      </div>
+
+      <!-- Panneau de Contrôle de Clôture -->
+      <div class="control-box">
+        <div>
+          <span style="font-weight:bold; font-size:16px;">Statut du Test : </span>
+          <span id="status-badge" style="padding:4px 10px; border-radius:6px; font-weight:bold; background: <?= config.status === 'OPEN' ? '#16a34a' : '#dc2626' ?>;">
+            <?= config.status === 'OPEN' ? '🟢 Ouvert aux réponses' : '🔴 Fermé aux réponses' ?>
+          </span>
+          <button onclick="toggleStatus()" id="btn-toggle-status" style="margin-left:12px; background:#475569; color:white; border:none; padding:6px 12px; border-radius:5px; cursor:pointer;">
+            <?= config.status === 'OPEN' ? 'Fermer maintenant' : 'Ouvrir maintenant' ?>
+          </button>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <label style="font-size:13px; color:#cbd5e1;">Fermeture programmée :</label>
+          <input type="datetime-local" id="close-datetime" value="<?= config.closeTime ?>" style="width:auto; margin:0; padding:6px; background:#0f172a; color:white;">
+          <button onclick="saveCloseTime()" style="background:#0284c7; color:white; border:none; padding:7px 12px; border-radius:5px; cursor:pointer;">Enregistrer</button>
+        </div>
+      </div>
+
+      <!-- KPI -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-title">Étudiants ayant composé</div>
+          <div class="kpi-value"><?= adminStats.studentsCount ?></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Moyenne de la classe</div>
+          <div class="kpi-value"><?= adminStats.average ?> / 20</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Note Médiane</div>
+          <div class="kpi-value"><?= adminStats.median ?> / 20</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">Note Max / Min</div>
+          <div class="kpi-value" style="font-size:24px; margin-top:10px;"><?= adminStats.max ?> / <?= adminStats.min ?></div>
+        </div>
+      </div>
+
+      <!-- Questions -->
+      <? for (let i = 0; i < adminStats.questions.length; i++) { 
+           let q = adminStats.questions[i];
+      ?>
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-title">Q<?= q.num ?>. <?= q.title ?></span>
+            <span class="q-badge"><?= q.correctCount ?> / <?= adminStats.studentsCount ?> réussites (<?= q.successRate ?>%)</span>
+          </div>
+
+          <? for (let j = 0; j < q.options.length; j++) { 
+               let opt = q.options[j];
+               let isCorrect = (opt.key === q.correctKey);
+               let pct = adminStats.studentsCount > 0 ? ((opt.count / adminStats.studentsCount) * 100).toFixed(1) : 0;
+          ?>
+            <div class="bar-row" onclick="toggleStudents('s_<?= i ?>_<?= j ?>')">
+              <div class="bar-label">
+                <span><strong><?= opt.key ?>.</strong> <?= opt.text ?> <?= isCorrect ? '✅ (Bonne réponse)' : '' ?></span>
+                <span><strong><?= opt.count ?></strong> élève(s) (<?= pct ?>%)</span>
+              </div>
+              <div class="bar-bg">
+                <div class="bar-fill <?= isCorrect ? 'bar-correct' : 'bar-wrong' ?>" style="width: <?= pct ?>%;">
+                  <?= pct >= 10 ? pct + '%' : '' ?>
+                </div>
+              </div>
+              <div id="s_<?= i ?>_<?= j ?>" class="students-tray">
+                <strong>Élèves :</strong> 
+                <? if (opt.students.length > 0) { ?>
+                  <? for (let s = 0; s < opt.students.length; s++) { ?>
+                    <span><?= opt.students[s] ?></span>
+                  <? } ?>
+                <? } else { ?>
+                  <em>Aucun élève</em>
+                <? } ?>
+              </div>
+            </div>
+          <? } ?>
+        </div>
+      <? } ?>
+    </div>
+
+    <script>
+      let currentStatus = "<?= config.status ?>";
+      function toggleStudents(id) {
+        const el = document.getElementById(id);
+        el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+      }
+
+      function toggleStatus() {
+        const newStatus = (currentStatus === "OPEN") ? "CLOSED" : "OPEN";
+        const closeTime = document.getElementById('close-datetime').value;
+        google.script.run.withSuccessHandler(() => {
+          location.reload();
+        }).updateQuizConfig(newStatus, closeTime);
+      }
+
+      function saveCloseTime() {
+        const closeTime = document.getElementById('close-datetime').value;
+        google.script.run.withSuccessHandler(() => {
+          alert("Date limite enregistrée avec succès !");
+        }).updateQuizConfig(currentStatus, closeTime);
+      }
+    </script>
+
+  <!-- ==================== B. VUE ÉTUDIANT (QUIZ) ==================== -->
+  <? } else { ?>
+
+    <? if (isClosed) { ?>
+      <!-- Écran si le test est fermé -->
+      <div class="card" style="text-align:center; padding:40px 25px;">
+        <div style="font-size:50px; margin-bottom:15px;">🔒</div>
+        <h2 style="color:#ef4444; margin:0 0 10px;">Évaluation Clôturée</h2>
+        <p style="color:#94a3b8; font-size:15px; line-height:1.5;">
+          Ce formulaire n'accepte plus de réponses car il a été fermé par l'enseignant ou sa date limite est expirée.
+        </p>
+      </div>
+
+    <? } else { ?>
+
+      <div id="login-screen" class="card">
+        <h2 style="margin-top:0; color:#38bdf8;">Évaluation Python Express</h2>
+        <div class="alert-rule">
+          ⏱️ <strong>10s par question</strong>. Dès que vous cliquez, vous passez à la suite !<br>
+          ⚠️ Une seule participation autorisée.
+        </div>
+        <label>Nom :</label>
+        <input type="text" id="nom" required placeholder="Votre NOM">
+        <label>Prénom :</label>
+        <input type="text" id="prenom" required placeholder="Votre Prénom">
+        <label>Email :</label>
+        <input type="email" id="email" required placeholder="votre.email@gmail.com">
+        <button class="start-btn" id="btn-submit-login" onclick="startQuiz()">Lancer le test</button>
+      </div>
+
+      <div id="quiz-screen" class="card hidden">
+        <div class="header-bar">
+          <span id="question-number">Question 1/10</span>
+          <span id="timer-text" style="color: #ef4444; font-size: 18px;">10s</span>
+        </div>
+        <div class="timer-container">
+          <div id="timer-bar" class="timer-bar"></div>
+        </div>
+        <h3 id="question-text" style="min-height: 50px; font-size: 18px; line-height: 1.4;"></h3>
+        <div id="options-container"></div>
+      </div>
+
+      <div id="result-screen" class="card hidden" style="text-align: center;">
+        <h2 style="color: #38bdf8;">Test Terminé !</h2>
+        <p>Vos réponses ont été enregistrées avec succès.</p>
+        <div style="font-size: 45px; margin: 20px 0; font-weight: bold;" id="final-score">--/20</div>
+        <p id="score-details" style="color: #94a3b8; font-size: 16px;"></p>
+        <p style="font-size: 13px; color: #64748b; margin-top: 25px;">Un e-mail récapitulatif vous a été envoyé.</p>
+      </div>
+
+      <script>
+        let questions = <?!= JSON.stringify(questionsData) ?>;
+        let currentIndex = 0;
+        let studentAnswers = {};
+        let timeLeft = 10;
+        let timerInterval = null;
+        let isTransitioning = false;
+        const TIME_PER_QUESTION = 10;
+
+        document.addEventListener('copy', (e) => e.preventDefault());
+        document.addEventListener('paste', (e) => e.preventDefault());
+
+        function shuffleArray(array) {
+          for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+          }
+          return array;
+        }
+
+        function startQuiz() {
+          const nom = document.getElementById('nom').value.trim();
+          const prenom = document.getElementById('prenom').value.trim();
+          const email = document.getElementById('email').value.trim();
+          if (!nom || !prenom || !email) return alert("Veuillez remplir tous les champs !");
+
+          const btn = document.getElementById('btn-submit-login');
+          btn.innerText = "Vérification en cours...";
+          btn.disabled = true;
+
+          google.script.run.withSuccessHandler((alreadyExists) => {
+            if (alreadyExists) {
+              alert("Erreur : Cette adresse e-mail a déjà été utilisée pour cette évaluation !");
+              btn.innerText = "Lancer le test";
+              btn.disabled = false;
+            } else {
+              document.getElementById('login-screen').classList.add('hidden');
+              document.getElementById('quiz-screen').classList.remove('hidden');
+              shuffleArray(questions);
+              loadQuestion(0);
+            }
+          }).checkEmailExists(email);
+        }
+
+        function loadQuestion(index) {
+          if (index >= questions.length) {
+            finishQuiz();
+            return;
+          }
+          isTransitioning = false;
+          currentIndex = index;
+          const q = questions[index];
+          
+          document.getElementById('question-number').innerText = `Question ${index + 1}/${questions.length}`;
+          document.getElementById('question-text').innerText = q.question;
+          
+          const container = document.getElementById('options-container');
+          container.innerHTML = '';
+          
+          q.options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'btn-opt';
+            btn.innerText = `${opt.key}. ${opt.text}`;
+            btn.onclick = () => onSelectOption(q.id, opt.key, btn);
+            container.appendChild(btn);
+          });
+
+          resetTimer();
+        }
+
+        function onSelectOption(questionId, optionKey, btnElement) {
+          if (isTransitioning) return;
+          isTransitioning = true;
+          clearInterval(timerInterval);
+
+          studentAnswers[questionId] = optionKey;
+          btnElement.classList.add('selected');
+
+          setTimeout(() => {
+            loadQuestion(currentIndex + 1);
+          }, 350);
+        }
+
+        function resetTimer() {
+          clearInterval(timerInterval);
+          timeLeft = TIME_PER_QUESTION;
+          updateTimerDisplay();
+
+          timerInterval = setInterval(() => {
+            timeLeft--;
+            updateTimerDisplay();
+            if (timeLeft <= 0) {
+              clearInterval(timerInterval);
+              loadQuestion(currentIndex + 1);
+            }
+          }, 1000);
+        }
+
+        function updateTimerDisplay() {
+          document.getElementById('timer-text').innerText = `${timeLeft}s`;
+          const percentage = (timeLeft / TIME_PER_QUESTION) * 100;
+          const bar = document.getElementById('timer-bar');
+          bar.style.width = `${percentage}%`;
+          bar.style.backgroundColor = timeLeft <= 3 ? '#ef4444' : '#22c55e';
+        }
+
+        function finishQuiz() {
+          clearInterval(timerInterval);
+          document.getElementById('quiz-screen').classList.add('hidden');
+          document.getElementById('result-screen').classList.remove('hidden');
+
+          const studentData = {
+            nom: document.getElementById('nom').value,
+            prenom: document.getElementById('prenom').value,
+            email: document.getElementById('email').value
+          };
+
+          google.script.run.withSuccessHandler((result) => {
+            if (result.error) return alert(result.error);
+            const scoreEl = document.getElementById('final-score');
+            scoreEl.innerText = `${result.score} / 20`;
+            scoreEl.style.color = result.score >= 10 ? '#22c55e' : '#ef4444';
+            document.getElementById('score-details').innerText = 
+              `${result.correct} réponse(s) correcte(s) sur ${result.total}`;
+          }).submitQuiz(studentData, studentAnswers);
+        }
+      </script>
+    <? } ?>
+  <? } ?>
+</body>
+</html>

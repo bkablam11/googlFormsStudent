@@ -1,0 +1,11 @@
+ID (Col A),Question (Col B),Choix A (Col C),Choix B (Col D),Choix C (Col E),Bonne Reponse (Col F)
+1,Quelle instruction permet d'interrompre immédiatement une boucle ?,exit,break,stop,B
+2,Quelle instruction permet de passer directement à l'itération suivante ?,continue,skip,next,A
+3,"Que produit l'instruction list(range(1, 5)) ?","[1, 2, 3, 4, 5]","[1, 2, 3, 4]","[0, 1, 2, 3, 4]",B
+4,Combien de fois s'exécute une boucle while False: ?,0 fois,1 fois,À l'infini,A
+5,Que renvoie range(3) ?,36527,37653,"0, 1, 2, 3",A
+6,Que fait la clause else attachée à une boucle for en Python ?,S'exécute si la boucle est interrompue par break,S'exécute si la boucle se termine normalement sans break,Déclenche une SyntaxError,B
+7,Quelle fonction permet d'obtenir à la fois l'index et l'élément dans une boucle for ?,index(),enumerate(),zip(),B
+8,"Quel est le pas par défaut de la fonction range(start, stop) ?",0,1,2,B
+9,Comment itérer simultanément sur deux listes L1 et L2 de même taille ?,"for x, y in pair(L1, L2):","for x, y in zip(L1, L2):","for x, y in combine(L1, L2):",B
+10,Que se passe-t-il si la condition d'un while reste toujours vraie ?,Une boucle infinie,Le programme s'arrête après 100 tours,Une RecursionError,A
