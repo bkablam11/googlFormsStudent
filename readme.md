@@ -19,12 +19,18 @@
 - [⏱️ FastQuiz-AntiIA — Évaluation Express \& Anti-Triche](#️-fastquiz-antiia--évaluation-express--anti-triche)
   - [📑 Sommaire](#-sommaire)
   - [🎯 Présentation](#-présentation)
-  - [📱 Aperçu \& Maquettes (Démo)](#-aperçu--maquettes-démo)
+  - [🔗 Accès à l'application](#-accès-à-lapplication)
+    - [🎓 Accès étudiant](#-accès-étudiant)
+    - [👨‍🏫 Accès enseignant](#-accès-enseignant)
+  - [📱 Aperçu \& Captures](#-aperçu--captures)
   - [⚡ Fonctionnalités Clés](#-fonctionnalités-clés)
     - [🎓 Côté Étudiant](#-côté-étudiant)
     - [👨‍🏫 Côté Enseignant (`?view=admin`)](#-côté-enseignant-viewadmin)
   - [🛡️ Mécanismes Anti-Triche / Anti-IA](#️-mécanismes-anti-triche--anti-ia)
   - [🏗️ Architecture \& Flux de Données](#️-architecture--flux-de-données)
+  - [🚀 Utilisation](#-utilisation)
+    - [Pour l'étudiant](#pour-létudiant)
+    - [Pour l'enseignant](#pour-lenseignant)
 
 ---
 
@@ -36,18 +42,47 @@ Face à l'essor des IA génératives (ChatGPT, Gemini, etc.), les questionnaires
 
 ---
 
-## 📱 Aperçu & Maquettes (Démo)
+## 🔗 Accès à l'application
 
-<!-- Placez ici votre vidéo ou GIF de démo -->
+### 🎓 Accès étudiant
+
 <p align="center">
-  <img src="https://via.placeholder.com/800x450.png?text=Inserez+ici+votre+GIF+ou+Video+de+Demonstration" alt="Aperçu Démo" width="80%">
+  <a href="https://tinyurl.com/quizz-python"><strong>👉 Ouvrir l'évaluation Python Express</strong></a>
 </p>
 
-<div align="center">
+Lien court à partager aux étudiants : **https://tinyurl.com/quizz-python**
 
-| Vue Étudiant (Chrono 10s) | Vue Enseignant (Débriefing Direct) |
-| :---: | :---: |
-| *(Insérez capture mobile ici)* | *(Insérez capture dashboard admin ici)* |
+### 👨‍🏫 Accès enseignant
+
+Depuis l'URL de déploiement Google Apps Script, ajouter le paramètre `?view=admin` pour ouvrir le tableau de bord de débriefing enseignant.
+
+---
+
+## 📱 Aperçu & Captures
+
+<p align="center">
+  <img src="pageaccueil.png" alt="Écran d'accueil de l'évaluation Python Express" width="80%">
+</p>
+
+<p align="center"><em>Écran d'accueil étudiant : saisie du nom, du prénom et de l'adresse e-mail avant le lancement.</em></p>
+
+<p align="center">
+  <img src="formclose.png" alt="Écran indiquant que l'évaluation est clôturée" width="80%">
+</p>
+
+<p align="center"><em>Écran affiché lorsque l'enseignant a fermé le test ou que la date limite est dépassée.</em></p>
+
+<p align="center">
+  <img src="qrapp.jpeg" alt="QR code pour accéder à l'application étudiant" width="280">
+</p>
+
+<p align="center"><em>QR code permettant d'accéder rapidement à l'application depuis un smartphone.</em></p>
+
+<p align="center"><em>Dashboard des profs</em></p>
+
+<p align="center">
+  <img src="dashboardprof.jpeg" alt="Écran indiquant que l'évaluation est clôturée" width="80%">
+</p>
 
 </div>
 
@@ -57,7 +92,9 @@ Face à l'essor des IA génératives (ChatGPT, Gemini, etc.), les questionnaires
 
 ### 🎓 Côté Étudiant
 - **Zéro installation :** Fonctionne directement sur smartphone, tablette ou ordinateur via un simple lien court.
+- **Identification avant le test :** L'étudiant renseigne son nom, son prénom et son e-mail avant de commencer.
 - **Timer dynamique (10s) :** Barre visuelle de défilement (vert $\rightarrow$ rouge).
+- **Progression question par question :** Une réponse sélectionnée entraîne automatiquement le passage à la suivante ; une question sans réponse est également passée à l'expiration du délai.
 - **Validation instantanée :** Dès que l'élève clique sur une réponse, un micro-délai de 350 ms confirme le choix et bascule immédiatement sur la question suivante.
 - **Résultat & Corrigé immédiat :** Calcul automatique de la note sur 20 et envoi d'un e-mail formaté avec le détail des erreurs.
 
@@ -109,3 +146,24 @@ Face à l'essor des IA génératives (ChatGPT, Gemini, etc.), les questionnaires
 │  • Onglet 'Questions' : Banque de questions modifiable en direct    │
 │  • Onglet 'Reponses'  : Historique des notes et choix par élève     │
 └─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🚀 Utilisation
+
+### Pour l'étudiant
+
+1. Ouvrir le [lien de l'application](https://tinyurl.com/quizz-python) ou scanner le QR code ci-dessus.
+2. Saisir le nom, le prénom et l'adresse e-mail.
+3. Cliquer sur **Lancer le test**.
+4. Répondre à chaque question dans le délai de 10 secondes.
+5. Consulter la note affichée à la fin et le récapitulatif envoyé par e-mail.
+
+### Pour l'enseignant
+
+1. Ouvrir l'URL de déploiement avec `?view=admin`.
+2. Vérifier le nombre de participants, la moyenne, la médiane et les notes extrêmes.
+3. Cliquer sur une barre de réponse pour afficher les étudiants concernés.
+4. Ouvrir ou fermer la session, ou programmer sa fermeture automatique.
+
