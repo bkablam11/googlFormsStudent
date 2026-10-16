@@ -14,14 +14,14 @@
     .btn-opt:hover { background: #334155; }
     .btn-opt.selected { background: #2563eb !important; border-color: #60a5fa !important; color: white !important; transform: scale(1.02); }
     .hidden { display: none; }
-    input { width: 100%; padding: 12px; margin: 8px 0 16px; border: 1px solid #475569; background: #0f172a; color: white; border-radius: 6px; font-size: 15px; }
+    input, select { width: 100%; padding: 12px; margin: 8px 0 16px; border: 1px solid #475569; background: #0f172a; color: white; border-radius: 6px; font-size: 15px; }
+    input:focus, select:focus { outline: none; border-color: #38bdf8; }
     button.start-btn { width: 100%; padding: 14px; background: #2563eb; color: white; border: none; font-size: 17px; border-radius: 6px; cursor: pointer; font-weight: bold; }
     button.start-btn:hover { background: #1d4ed8; }
     button.start-btn:disabled { background: #64748b; cursor: not-allowed; }
     .header-bar { display: flex; justify-content: space-between; align-items: center; font-weight: bold; margin-bottom: 10px; font-size: 16px; color: #94a3b8; }
     .alert-rule { background: rgba(239, 68, 68, 0.15); border-left: 4px solid #ef4444; padding: 10px; margin-bottom: 15px; font-size: 13px; color: #fca5a5; line-height: 1.4; }
 
-    /* BANNIÈRE TIMER GLOBAL DYNAMIQUE */
     .global-countdown-banner {
       background: rgba(56, 189, 248, 0.1);
       border: 1px solid #0284c7;
@@ -42,7 +42,7 @@
     }
 
     /* VUE ENSEIGNANT */
-    .admin-container { max-width: 950px; margin: 10px auto; }
+    .admin-container { max-width: 1050px; margin: 10px auto; }
     .control-box { background: #1e293b; padding: 20px; border-radius: 10px; margin-bottom: 25px; border: 1px solid #38bdf8; display: flex; flex-direction: column; gap: 15px; }
     .control-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px; }
@@ -72,140 +72,235 @@
   <? if (isAdmin) { ?>
     <div class="admin-container">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-        <h2 style="margin:0; color:#38bdf8;">📊 Débriefing Session QCM</h2>
+        <h2 style="margin:0; color:#38bdf8;">📊 Débriefing Multi-Classes</h2>
         <button onclick="location.reload()" style="background:#2563eb; color:white; border:none; padding:8px 15px; border-radius:6px; cursor:pointer; font-weight:bold;">🔄 Rafraîchir</button>
       </div>
 
-      <!-- Panneau de Contrôle & Clôture -->
+      <!-- Panneau de Contrôle -->
       <div class="control-box">
         <div class="control-row">
           <div>
-            <span style="font-weight:bold; font-size:15px;">Statut actuel : </span>
+            <span style="font-weight:bold; font-size:15px;">Statut : </span>
             <span id="status-badge" style="padding:4px 10px; border-radius:6px; font-weight:bold; background: <?= config.status === 'OPEN' ? '#16a34a' : '#dc2626' ?>;">
-              <?= config.status === 'OPEN' ? '🟢 Ouvert aux réponses' : '🔴 Fermé aux réponses' ?>
+              <?= config.status === 'OPEN' ? '🟢 Ouvert' : '🔴 Fermé' ?>
             </span>
-            <button onclick="toggleStatus()" id="btn-toggle-status" style="margin-left:10px; background:#475569; color:white; border:none; padding:7px 12px; border-radius:5px; cursor:pointer;">
-              <?= config.status === 'OPEN' ? 'Fermer maintenant' : 'Ouvrir maintenant' ?>
+            <button onclick="toggleStatus()" id="btn-toggle-status" style="margin-left:8px; background:#475569; color:white; border:none; padding:7px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">
+              <?= config.status === 'OPEN' ? 'Fermer la session' : 'Ouvrir la session' ?>
             </button>
-            <button onclick="sendEmailsToAll()" id="btn-send-emails" style="margin-left:8px; background:#16a34a; color:white; border:none; padding:7px 13px; border-radius:5px; cursor:pointer; font-weight:bold;">
-              📧 Envoyer les corrigés maintenant
+            <button onclick="sendEmailsToAll()" id="btn-send-emails" style="margin-left:6px; background:#16a34a; color:white; border:none; padding:7px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">
+              📧 Envoyer corrigés
             </button>
           </div>
           
-          <div style="display:flex; align-items:center; gap:8px;">
-            <label style="font-size:13px; color:#cbd5e1;">Clôture programmée :</label>
+          <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
+            <label style="font-size:13px; color:#cbd5e1;">Module :</label>
+            <input type="text" id="quiz-id" value="<?= config.quizId ?>" placeholder="LECON_1" style="width:90px; margin:0; padding:6px; background:#0f172a; color:#38bdf8; font-weight:bold; text-align:center;">
+            
+            <label style="font-size:13px; color:#cbd5e1;">Clôture :</label>
             <input type="datetime-local" id="close-datetime" value="<?= config.closeTime ?>" style="width:auto; margin:0; padding:6px; background:#0f172a; color:white;">
-            <button onclick="saveCloseTime()" style="background:#0284c7; color:white; border:none; padding:7px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">Enregistrer</button>
+            <button onclick="saveConfig()" style="background:#0284c7; color:white; border:none; padding:7px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">Enregistrer</button>
           </div>
         </div>
 
-        <!-- Compte à rebours dynamique dans la vue admin -->
-        <div style="background:#0f172a; border-radius:6px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; border:1px dashed #475569;">
-          <span style="font-size:13px; color:#94a3b8;">⏳ Temps restant avant la fermeture automatique et l'envoi des corrigés :</span>
-          <span id="admin-timer" class="countdown-digits" style="font-size:15px;">Calcul en cours...</span>
+        <!-- Filtres : Feuille Source & Classe -->
+        <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; background:#0f172a; padding:10px 14px; border-radius:6px; border:1px solid #334155; gap:10px;">
+          <div style="display:flex; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div>
+              <label style="font-size:13px; font-weight:bold; color:#38bdf8;">📁 Feuille analysée :</label>
+              <select id="target-sheet" onchange="applyFilters()" style="width:auto; margin:0; padding:6px 10px; background:#1e293b; color:white; font-size:13px;">
+                <? for (let s = 0; s < availableSheets.length; s++) { ?>
+                  <option value="<?= availableSheets[s] ?>"><?= availableSheets[s] ?></option>
+                <? } ?>
+              </select>
+            </div>
+
+            <div>
+              <label style="font-size:13px; font-weight:bold; color:#38bdf8;">🎓 Classe :</label>
+              <select id="filter-class" onchange="applyFilters()" style="width:auto; margin:0; padding:6px 10px; background:#1e293b; color:white; font-size:13px;">
+                <option value="ALL">Toutes les classes</option>
+                <option value="GCBAT2">GCBAT2</option>
+                <option value="IDA1">IDA1</option>
+                <option value="FCGE1">FCGE1</option>
+              </select>
+            </div>
+            <span id="loading-filter" style="display:none; color:#38bdf8; font-size:13px;">⚡ Mise à jour...</span>
+          </div>
+
+          <div>
+            <span id="admin-timer" class="countdown-digits" style="font-size:14px;">Calcul...</span>
+          </div>
         </div>
       </div>
 
-      <!-- KPI -->
+      <!-- KPI Dynamiques -->
       <div class="kpi-grid">
         <div class="kpi-card">
           <div class="kpi-title">Étudiants ayant composé</div>
-          <div class="kpi-value"><?= adminStats.studentsCount ?></div>
+          <div class="kpi-value" id="kpi-students">0</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-title">Moyenne de la classe</div>
-          <div class="kpi-value"><?= adminStats.average ?> / 20</div>
+          <div class="kpi-title">Moyenne de la sélection</div>
+          <div class="kpi-value" id="kpi-average">0.00 / 20</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-title">Note Médiane</div>
-          <div class="kpi-value"><?= adminStats.median ?> / 20</div>
+          <div class="kpi-value" id="kpi-median">0.00 / 20</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-title">Note Max / Min</div>
-          <div class="kpi-value" style="font-size:24px; margin-top:10px;"><?= adminStats.max ?> / <?= adminStats.min ?></div>
+          <div class="kpi-value" id="kpi-max-min" style="font-size:24px; margin-top:10px;">0 / 0</div>
         </div>
       </div>
 
-      <!-- Questions & Réponses détaillées -->
-      <? for (let i = 0; i < adminStats.questions.length; i++) { 
-           let q = adminStats.questions[i];
-      ?>
-        <div class="q-card">
-          <div class="q-header">
-            <span class="q-title">Q<?= q.num ?>. <?= q.title ?></span>
-            <span class="q-badge"><?= q.correctCount ?> / <?= adminStats.studentsCount ?> réussites (<?= q.successRate ?>%)</span>
-          </div>
-
-          <? for (let j = 0; j < q.options.length; j++) { 
-               let opt = q.options[j];
-               let isCorrect = (opt.key === q.correctKey);
-               let pct = adminStats.studentsCount > 0 ? ((opt.count / adminStats.studentsCount) * 100).toFixed(1) : 0;
-          ?>
-            <div class="bar-row" onclick="toggleStudents('s_<?= i ?>_<?= j ?>')">
-              <div class="bar-label">
-                <span><strong><?= opt.key ?>.</strong> <?= opt.text ?> <?= isCorrect ? '✅ (Bonne réponse)' : '' ?></span>
-                <span><strong><?= opt.count ?></strong> élève(s) (<?= pct ?>%)</span>
-              </div>
-              <div class="bar-bg">
-                <div class="bar-fill <?= isCorrect ? 'bar-correct' : 'bar-wrong' ?>" style="width: <?= pct ?>%;">
-                  <?= pct >= 8 ? pct + '%' : '' ?>
-                </div>
-              </div>
-              <div id="s_<?= i ?>_<?= j ?>" class="students-tray">
-                <strong>Élèves ayant choisi cette option :</strong> 
-                <? if (opt.students.length > 0) { ?>
-                  <? for (let s = 0; s < opt.students.length; s++) { ?>
-                    <span><?= opt.students[s] ?></span>
-                  <? } ?>
-                <? } else { ?>
-                  <em>Aucun élève</em>
-                <? } ?>
-              </div>
-            </div>
-          <? } ?>
-        </div>
-      <? } ?>
+      <!-- Conteneur dynamique des Questions -->
+      <div id="questions-container"></div>
     </div>
 
     <script>
       let currentStatus = "<?= config.status ?>";
       let scheduledCloseTime = "<?= config.closeTime ?>";
+      let initialAdminStats = <?!= JSON.stringify(adminStats) ?>;
+      let currentStudentsCount = 0;
+
+      function escapeHtml(text) {
+        if (!text) return "";
+        return String(text)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
 
       function toggleStudents(id) {
         const el = document.getElementById(id);
-        el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+        if (el) el.style.display = (el.style.display === 'block') ? 'none' : 'block';
       }
 
+      // Clôture manuelle : Déclenche automatiquement le tri par classe et l'envoi des corrigés
       function toggleStatus() {
-        const newStatus = (currentStatus === "OPEN") ? "CLOSED" : "OPEN";
-        const closeTime = document.getElementById('close-datetime').value;
-        google.script.run.withSuccessHandler(() => {
-          location.reload();
-        }).updateQuizConfig(newStatus, closeTime);
+        if (currentStatus === "OPEN") {
+          const confirmClose = confirm(
+            "Voulez-vous clôturer ce test maintenant ?\n\n" +
+            "⚡ Cela va AUTOMATIQUEMENT :\n" +
+            "1. Trier et archiver les notes dans des onglets séparés par classe.\n" +
+            "2. Envoyer les corrigés par e-mail à chaque étudiant.\n" +
+            "3. Vider la feuille 'Reponses' pour la session suivante."
+          );
+          if (!confirmClose) return;
+
+          google.script.run.withSuccessHandler((res) => {
+            alert(`✅ Test clôturé avec succès !\nFeuilles d'archives créées :\n${res.createdSheets}\n\nNouveau module préparé : ${res.nextQuizId}`);
+            location.reload();
+          }).closeAndProcessSession();
+        } else {
+          // Réouverture
+          const closeTime = document.getElementById('close-datetime').value;
+          const quizId = document.getElementById('quiz-id').value;
+          google.script.run.withSuccessHandler(() => {
+            location.reload();
+          }).updateQuizConfig("OPEN", closeTime, quizId);
+        }
       }
 
-      function saveCloseTime() {
+      function saveConfig() {
         const closeTime = document.getElementById('close-datetime').value;
+        const quizId = document.getElementById('quiz-id').value;
         google.script.run.withSuccessHandler(() => {
-          alert("Date limite et déclencheur automatique enregistrés avec succès !");
+          alert(`Configuration enregistrée avec succès pour [${quizId}] !`);
           location.reload();
-        }).updateQuizConfig(currentStatus, closeTime);
+        }).updateQuizConfig(currentStatus, closeTime, quizId);
       }
 
       function sendEmailsToAll() {
-        if (!confirm("Voulez-vous envoyer immédiatement le corrigé détaillé avec toutes les formules à tous les étudiants ayant composé ?")) return;
+        if (!confirm("Voulez-vous renvoyer les corrigés détaillés aux étudiants de la feuille actuelle ?")) return;
         const btn = document.getElementById('btn-send-emails');
-        btn.innerText = "⏳ Envoi en cours...";
+        btn.innerText = "⏳ Envoi...";
         btn.disabled = true;
 
         google.script.run.withSuccessHandler((count) => {
-          alert(`✅ Corrigés détaillés envoyés avec succès à ${count} étudiant(s) !`);
-          btn.innerText = "📧 Envoyer les corrigés maintenant";
+          alert(`✅ Corrigés envoyés avec succès à ${count} étudiant(s) !`);
+          btn.innerText = "📧 Envoyer corrigés";
           btn.disabled = false;
         }).sendAllCorrections();
       }
 
-      // Initialisation du compte à rebours dynamique dans la vue admin
+      function renderQuestionsHtml(questions) {
+        if (!questions || questions.length === 0) {
+          return `<div class="card" style="text-align:center; padding:30px; color:#94a3b8;">
+                    ℹ️ Aucune question enregistrée pour cette sélection dans la feuille choisie.
+                  </div>`;
+        }
+        
+        let html = "";
+        for (let i = 0; i < questions.length; i++) {
+          const q = questions[i];
+          html += `
+            <div class="q-card">
+              <div class="q-header">
+                <span class="q-title">Q${q.num}. ${escapeHtml(q.title)}</span>
+                <span class="q-badge">${q.correctCount} / ${currentStudentsCount} réussites (${q.successRate}%)</span>
+              </div>`;
+
+          for (let j = 0; j < q.options.length; j++) {
+            const opt = q.options[j];
+            const isCorrect = (opt.key === q.correctKey);
+            const pct = currentStudentsCount > 0 ? ((opt.count / currentStudentsCount) * 100).toFixed(1) : 0;
+            const trayId = `s_${i}_${j}`;
+
+            let studentsHtml = "<em>Aucun élève</em>";
+            if (opt.students && opt.students.length > 0) {
+              studentsHtml = opt.students.map(s => `<span>${escapeHtml(s)}</span>`).join("");
+            }
+
+            html += `
+              <div class="bar-row" onclick="toggleStudents('${trayId}')">
+                <div class="bar-label">
+                  <span><strong>${opt.key}.</strong> ${escapeHtml(opt.text)} ${isCorrect ? '✅ (Bonne réponse)' : ''}</span>
+                  <span><strong>${opt.count}</strong> élève(s) (${pct}%)</span>
+                </div>
+                <div class="bar-bg">
+                  <div class="bar-fill ${isCorrect ? 'bar-correct' : 'bar-wrong'}" style="width: ${pct}%;">
+                    ${pct >= 8 ? pct + '%' : ''}
+                  </div>
+                </div>
+                <div id="${trayId}" class="students-tray">
+                  <strong>Élèves concernés :</strong> ${studentsHtml}
+                </div>
+              </div>`;
+          }
+          html += `</div>`;
+        }
+        return html;
+      }
+
+      function updateAdminUI(stats) {
+        if (!stats) return;
+        currentStudentsCount = stats.studentsCount;
+
+        document.getElementById('kpi-students').innerText = stats.studentsCount;
+        document.getElementById('kpi-average').innerText = stats.average + " / 20";
+        document.getElementById('kpi-median').innerText = stats.median + " / 20";
+        document.getElementById('kpi-max-min').innerText = stats.max + " / " + stats.min;
+
+        document.getElementById('questions-container').innerHTML = renderQuestionsHtml(stats.questions);
+        document.getElementById('loading-filter').style.display = 'none';
+      }
+
+      function applyFilters() {
+        const selectedClass = document.getElementById('filter-class').value;
+        const selectedSheet = document.getElementById('target-sheet').value;
+        document.getElementById('loading-filter').style.display = 'inline-block';
+
+        google.script.run
+          .withSuccessHandler(updateAdminUI)
+          .withFailureHandler((err) => {
+            alert("Erreur : " + err);
+            document.getElementById('loading-filter').style.display = 'none';
+          })
+          .getAdminStats(selectedClass, selectedSheet);
+      }
+
       function initAdminCountdown() {
         const timerEl = document.getElementById('admin-timer');
         if (!scheduledCloseTime || currentStatus === "CLOSED") {
@@ -231,37 +326,59 @@
 
           let txt = d > 0 ? `${d}j ` : "";
           txt += `${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
-          timerEl.innerText = txt;
+          timerEl.innerText = "⏳ Clôture : " + txt;
         }
 
         tick();
         setInterval(tick, 1000);
       }
-      initAdminCountdown();
+
+      window.onload = function() {
+        const targetSheetSelect = document.getElementById('target-sheet');
+        for (let i = 0; i < targetSheetSelect.options.length; i++) {
+          if (targetSheetSelect.options[i].value.includes("GCBAT")) {
+            targetSheetSelect.selectedIndex = i;
+            break;
+          }
+        }
+        applyFilters();
+        initAdminCountdown();
+      };
     </script>
 
   <!-- ==================== B. VUE ÉTUDIANT (QUIZ) ==================== -->
   <? } else { ?>
 
     <? if (isClosed) { ?>
-      <!-- Écran si le test est fermé -->
       <div class="card" style="text-align:center; padding:45px 25px;">
         <div style="font-size:55px; margin-bottom:15px;">🔒</div>
         <h2 style="color:#ef4444; margin:0 0 10px;">Évaluation Clôturée</h2>
         <p style="color:#94a3b8; font-size:15px; line-height:1.6;">
           Ce questionnaire n'accepte plus de réponses.<br>
-          La date limite est expirée ou la session a été fermée par l'enseignant.<br>
+          La session est terminée ou la date limite est expirée.<br>
           <span style="color:#38bdf8;">Les corrigés détaillés ont été expédiés par e-mail aux étudiants ayant participé.</span>
         </p>
       </div>
 
     <? } else { ?>
 
-      <!-- Écran 1 : Identification & Accueil -->
+      <!-- Écran de Verrouillage Matériel (localStorage) -->
+      <div id="locked-device-screen" class="card hidden" style="text-align: center; padding: 40px 25px;">
+        <div style="font-size: 55px; margin-bottom: 15px;">🚫</div>
+        <h2 style="color: #ef4444; margin: 0 0 10px;">Participation Déjà Enregistrée</h2>
+        <p style="color: #94a3b8; font-size: 15px; line-height: 1.6;">
+          Ce smartphone a déjà été utilisé pour valider l'évaluation du module <strong id="locked-module-name" style="color:#38bdf8;"></strong> avec l'adresse :<br>
+          <strong id="locked-device-email" style="color: #38bdf8; font-size: 16px;"></strong>
+        </p>
+        <div style="margin-top: 20px; padding: 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 8px; font-size: 13px; color: #fca5a5;">
+          ⚠️ <strong>Règle Anti-Fraude :</strong> Une seule participation par appareil est autorisée. Cet appareil se déverrouillera automatiquement dès 23h59 pour la session suivante.
+        </div>
+      </div>
+
+      <!-- Écran 1 : Accueil avec Menu Déroulant des Classes -->
       <div id="login-screen" class="card">
         <h2 style="margin-top:0; color:#38bdf8; text-align:center;">Évaluation Mathématiques</h2>
         
-        <!-- Timer dynamique de fermeture du test -->
         <div id="closing-banner" class="global-countdown-banner">
           <span>⏳ Fin de session dans :</span>
           <span id="closing-countdown" class="countdown-digits">Calcul...</span>
@@ -269,17 +386,25 @@
 
         <div class="alert-rule">
           ⏱️ <strong>10 secondes par question</strong>. Dès que vous cliquez, vous passez à la suite !<br>
-          ⚠️ Une seule participation autorisée. Note attribuée sur 20.
+          ⚠️ Une seule participation autorisée sur cet appareil.
         </div>
 
-        <label style="font-size:14px; font-weight:600;">Nom :</label>
+        <label style="font-size:14px; font-weight:600;">Votre Classe / Filière :</label>
+        <select id="classe" required>
+          <option value="" disabled selected>-- Sélectionnez votre filière --</option>
+          <option value="GCBAT2">GCBAT2 (Génie Civil Bâtiment 2A)</option>
+          <option value="IDA1">IDA1 (Informatique Dév. Application 1A)</option>
+          <option value="FCGE1">FCGE1 (Finance Compta & Gestion 1A)</option>
+        </select>
+
+        <label style="font-size:14px; font-weight:600;">Nom de famille :</label>
         <input type="text" id="nom" required placeholder="Ex : KOUAME">
         
         <label style="font-size:14px; font-weight:600;">Prénom :</label>
         <input type="text" id="prenom" required placeholder="Ex : Jean-Yves">
         
-        <label style="font-size:14px; font-weight:600;">Email personnel (pour recevoir le corrigé) :</label>
-        <input type="email" id="email" required placeholder="votre.email@gmail.com">
+        <label style="font-size:14px; font-weight:600;">Email personnel (pour recevoir le corrigé à 23h59) :</label>
+        <input type="email" id="email" required placeholder="Ex : etudiant@gmail.com">
         
         <button class="start-btn" id="btn-submit-login" onclick="startQuiz()">Lancer le test</button>
       </div>
@@ -309,12 +434,13 @@
         
         <div style="margin-top: 25px; padding: 14px; background: rgba(56, 189, 248, 0.1); border: 1px solid #0284c7; border-radius: 8px; font-size: 13px; color: #94a3b8; line-height: 1.5;">
           🔒 <strong>Corrigé officiel :</strong><br>
-          Pour garantir l'équité, le corrigé complet détaillé avec toutes les formules vous sera <strong>automatiquement envoyé par e-mail dès la fermeture définitive du test</strong>.
+          Pour garantir l'équité entre les groupes, le corrigé complet détaillé avec toutes les formules vous sera <strong>automatiquement envoyé par e-mail ce soir à 23h59</strong>.
         </div>
       </div>
 
       <script>
-        let questions = <?!= JSON.stringify(questionsData) ?>;
+        const allQuestionsByClass = <?!= JSON.stringify(questionsByClass) ?>;
+        let questions = [];
         let currentIndex = 0;
         let studentAnswers = {};
         let timeLeft = 10;
@@ -322,11 +448,47 @@
         let isTransitioning = false;
         const TIME_PER_QUESTION = 10;
         const scheduledClose = "<?= config.closeTime ?>";
+        const currentQuizId = "<?= config.quizId ?>";
+        const STORAGE_KEY = "FASTQUIZ_SUBMITTED_" + currentQuizId;
 
         document.addEventListener('copy', (e) => e.preventDefault());
         document.addEventListener('paste', (e) => e.preventDefault());
 
-        // ================= GESTION DU TIMER DYNAMIQUE GLOBAL =================
+        function checkDeviceLock() {
+          const rawData = localStorage.getItem(STORAGE_KEY);
+          if (!rawData) return false;
+
+          let lockedEmail = rawData;
+          let expiresAt = null;
+
+          try {
+            const parsed = JSON.parse(rawData);
+            if (parsed && parsed.email) {
+              lockedEmail = parsed.email;
+              expiresAt = parsed.expiresAt ? new Date(parsed.expiresAt).getTime() : null;
+            }
+          } catch(e) {}
+
+          if (expiresAt && new Date().getTime() >= expiresAt) {
+            localStorage.removeItem(STORAGE_KEY);
+            return false;
+          }
+
+          document.getElementById('login-screen').classList.add('hidden');
+          document.getElementById('quiz-screen').classList.add('hidden');
+          document.getElementById('result-screen').classList.add('hidden');
+          document.getElementById('locked-device-screen').classList.remove('hidden');
+          document.getElementById('locked-device-email').innerText = lockedEmail;
+          document.getElementById('locked-module-name').innerText = currentQuizId;
+          return true;
+        }
+
+        function isValidEmail(email) {
+          if (!email) return false;
+          const regex = /^[a-zA-Z0-9._%+-]+@([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/;
+          return regex.test(email.trim().toLowerCase());
+        }
+
         function startClosingTimer() {
           const displayEl = document.getElementById('closing-countdown');
           if (!scheduledClose || !displayEl) return;
@@ -338,9 +500,8 @@
             const diff = targetTime - now;
 
             if (diff <= 0) {
-              displayEl.innerText = "Temps écoulé !";
+              displayEl.innerText = "Session expirée !";
               displayEl.style.color = "#ef4444";
-              // Si le temps expire pendant que l'étudiant est sur la page d'accueil
               setTimeout(() => { location.reload(); }, 1500);
               return;
             }
@@ -358,9 +519,7 @@
           updateDisplay();
           setInterval(updateDisplay, 1000);
         }
-        startClosingTimer();
 
-        // ================= GESTION DU QUIZ =================
         function shuffleArray(array) {
           for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -370,10 +529,26 @@
         }
 
         function startQuiz() {
+          if (checkDeviceLock()) return;
+
+          const classe = document.getElementById('classe').value;
           const nom = document.getElementById('nom').value.trim();
           const prenom = document.getElementById('prenom').value.trim();
-          const email = document.getElementById('email').value.trim();
+          const email = document.getElementById('email').value.trim().toLowerCase();
+
+          if (!classe) return alert("Veuillez sélectionner votre classe dans le menu déroulant !");
           if (!nom || !prenom || !email) return alert("Veuillez renseigner votre Nom, Prénom et Adresse e-mail !");
+
+          if (!isValidEmail(email)) {
+            return alert("Format d'e-mail invalide !\nVeuillez entrer une adresse e-mail correcte avec '@' et un nom de domaine valide (ex: jean@gmail.com).");
+          }
+
+          const classQuestions = allQuestionsByClass[classe] || allQuestionsByClass["GCBAT2"];
+          if (!classQuestions || classQuestions.length === 0) {
+            return alert(`Aucune question disponible pour la classe [${classe}]. Veuillez contacter l'enseignant.`);
+          }
+
+          questions = classQuestions;
 
           const btn = document.getElementById('btn-submit-login');
           btn.innerText = "Vérification en cours...";
@@ -381,7 +556,7 @@
 
           google.script.run.withSuccessHandler((alreadyExists) => {
             if (alreadyExists) {
-              alert("Erreur : Cette adresse e-mail a déjà été utilisée pour passer ce test !");
+              alert("Erreur : Cette adresse e-mail a déjà été utilisée pour cette session !");
               btn.innerText = "Lancer le test";
               btn.disabled = false;
             } else {
@@ -460,11 +635,20 @@
           document.getElementById('quiz-screen').classList.add('hidden');
           document.getElementById('result-screen').classList.remove('hidden');
 
+          const email = document.getElementById('email').value.trim().toLowerCase();
           const studentData = {
-            nom: document.getElementById('nom').value,
-            prenom: document.getElementById('prenom').value,
-            email: document.getElementById('email').value
+            classe: document.getElementById('classe').value,
+            nom: document.getElementById('nom').value.trim(),
+            prenom: document.getElementById('prenom').value.trim(),
+            email: email
           };
+
+          const lockPayload = {
+            email: email,
+            expiresAt: scheduledClose,
+            timestamp: new Date().getTime()
+          };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(lockPayload));
 
           google.script.run.withSuccessHandler((result) => {
             if (result.error) return alert(result.error);
@@ -475,6 +659,11 @@
               `${result.correct} réponse(s) correcte(s) sur ${result.total}`;
           }).submitQuiz(studentData, studentAnswers);
         }
+
+        window.onload = function() {
+          checkDeviceLock();
+          startClosingTimer();
+        };
       </script>
     <? } ?>
   <? } ?>
