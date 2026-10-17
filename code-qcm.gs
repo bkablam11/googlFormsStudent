@@ -121,21 +121,41 @@ function deleteTriggersByName(functionName) {
   }
 }
 
-// ==================== PROCESSUS DE CLÔTURE UNIQUE (AUTOMATIQUE OU MANUEL) ====================
+// ==================== EXTRACTION DE LA VRAIE DATE D'ÉPREUVE ====================
+function extractDateStrFromCell(cellVal) {
+  if (!cellVal) return null;
+  if (cellVal instanceof Date) {
+    const d = String(cellVal.getDate()).padStart(2, '0');
+    const m = String(cellVal.getMonth() + 1).padStart(2, '0');
+    const y = String(cellVal.getFullYear()).slice(-2);
+    return `${d}-${m}-${y}`;
+  }
+  const str = String(cellVal).trim();
+  const frMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if (frMatch) {
+    const d = frMatch[1].padStart(2, '0');
+    const m = frMatch[2].padStart(2, '0');
+    const y = frMatch[3].slice(-2);
+    return `${d}-${m}-${y}`;
+  }
+  return null;
+}
+
+// ==================== PROCESSUS DE CLÔTURE UNIQUE ====================
 function closeAndProcessSession() {
   const props = PropertiesService.getScriptProperties();
 
-  // 1. Envoi des e-mails avec corrigés
+  // 1. Envoi des e-mails avec corrigés notés sur 10
   sendAllCorrections();
 
-  // 2. Tri et archivage automatique par classe
+  // 2. Tri et archivage automatique par classe (sans doublon et avec vraie date)
   const createdSheets = archiveAndSplitByClass();
 
   // 3. Bascule du statut sur FERMÉ
   props.setProperty("QUIZ_STATUS", "CLOSED");
   props.setProperty("EMAILS_ALREADY_SENT", "true");
 
-  // 4. Passage automatique au module suivant et préparation pour demain
+  // 4. Passage automatique au module suivant et préparation pour le lendemain
   const currentQuizId = props.getProperty("QUIZ_ID") || "LECON_1";
   const nextQuizId = getNextQuizId(currentQuizId);
   props.setProperty("QUIZ_ID", nextQuizId);
@@ -149,7 +169,6 @@ function closeAndProcessSession() {
   return { success: true, createdSheets: createdSheets, nextQuizId: nextQuizId };
 }
 
-// Déclencheur automatique de 23h59
 function autoCloseAndSendEmails() {
   closeAndProcessSession();
 }
@@ -186,6 +205,7 @@ function getAllQuestionsByClass() {
   return result;
 }
 
+// ==================== ARCHIVAGE AVEC VRAIE DATE ET SANS DOUBLONS ====================
 function archiveAndSplitByClass() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const rSheet = ss.getSheetByName("Reponses");
@@ -195,11 +215,21 @@ function archiveAndSplitByClass() {
   if (rData.length <= 1) return "Aucune réponse à archiver";
 
   const cfg = getQuizConfig();
-  const now = new Date();
-  const day = String(now.getDate()).padStart(2, '0');
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const year = String(now.getFullYear()).slice(-2);
-  const dateStr = `${day}-${month}-${year}`;
+
+  // Extraction de la vraie date depuis les réponses de la feuille
+  let defaultDateStr = "";
+  for (let i = 1; i < rData.length; i++) {
+    const extracted = extractDateStrFromCell(rData[i][0]);
+    if (extracted) {
+      defaultDateStr = extracted;
+      break;
+    }
+  }
+
+  if (!defaultDateStr) {
+    const now = new Date();
+    defaultDateStr = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getFullYear()).slice(-2)}`;
+  }
 
   const rowsByClass = {};
   for (let i = 1; i < rData.length; i++) {
@@ -210,34 +240,64 @@ function archiveAndSplitByClass() {
     rowsByClass[cls].push(row);
   }
 
-  const createdSheets = [];
+  const processedSheets = [];
 
   for (const cls in rowsByClass) {
-    const baseName = `${dateStr}-${cfg.quizId}-${cls}`;
-    let targetName = baseName;
-    let counter = 1;
-    while (ss.getSheetByName(targetName)) {
-      targetName = `${baseName}_(${counter})`;
-      counter++;
+    const classRows = rowsByClass[cls];
+    let classDateStr = defaultDateStr;
+
+    for (let r = 0; r < classRows.length; r++) {
+      const rowDate = extractDateStrFromCell(classRows[r][0]);
+      if (rowDate) {
+        classDateStr = rowDate;
+        break;
+      }
     }
 
-    const newSheet = ss.insertSheet(targetName);
-    newSheet.appendRow([
-      "Date", "Nom", "Prénom", "Classe", "Email", "Score / 20",
-      "Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9", "Q10"
-    ]);
-    newSheet.getRange(1, 1, 1, 16).setFontWeight("bold").setBackground("#e2e8f0");
+    const targetName = `${classDateStr}-${cfg.quizId}-${cls}`;
+    let targetSheet = ss.getSheetByName(targetName);
 
-    rowsByClass[cls].forEach(r => newSheet.appendRow(r));
-    createdSheets.push(targetName);
+    // Si la feuille n'existe pas encore, on la crée proprement
+    if (!targetSheet) {
+      targetSheet = ss.insertSheet(targetName);
+      targetSheet.appendRow([
+        "Date", "Nom", "Prénom", "Classe", "Email", "Score / 10",
+        "Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9", "Q10"
+      ]);
+      targetSheet.getRange(1, 1, 1, 16).setFontWeight("bold").setBackground("#e2e8f0");
+      processedSheets.push(targetName);
+    } else {
+      processedSheets.push(`${targetName} (complété)`);
+    }
+
+    // Protection anti-doublon d'étudiants par e-mail
+    const existingData = targetSheet.getDataRange().getDisplayValues();
+    const existingEmails = new Set();
+    for (let k = 1; k < existingData.length; k++) {
+      if (existingData[k][4]) {
+        existingEmails.add(String(existingData[k][4]).trim().toLowerCase());
+      }
+    }
+
+    classRows.forEach(r => {
+      const email = String(r[4] || "").trim().toLowerCase();
+      if (!existingEmails.has(email)) {
+        targetSheet.appendRow(r);
+        existingEmails.add(email);
+      }
+    });
   }
 
+  // Nettoyage complet du sas Reponses
   const lastRow = rSheet.getLastRow();
   if (lastRow > 1) {
     rSheet.deleteRows(2, lastRow - 1);
   }
 
-  return createdSheets.join(", ");
+  // S'assurer que l'en-tête de Reponses affiche bien Score / 10
+  rSheet.getRange(1, 6).setValue("Score / 10");
+
+  return processedSheets.join(", ");
 }
 
 function isValidEmail(email) {
@@ -260,6 +320,7 @@ function checkEmailExists(email) {
   return false;
 }
 
+// ==================== SOUMISSION DU TEST (NOTE STRICTE SUR 10) ====================
 function submitQuiz(studentData, answers) {
   const config = getQuizConfig();
   const now = new Date().getTime();
@@ -284,7 +345,7 @@ function submitQuiz(studentData, answers) {
 
   const qData = qSheet.getDataRange().getDisplayValues();
   let correctCount = 0;
-  const totalQuestions = qData.length - 1;
+  const totalQuestions = Math.max(1, qData.length - 1);
   let studentAnswersRow = [];
 
   for (let i = 1; i < qData.length; i++) {
@@ -296,7 +357,13 @@ function submitQuiz(studentData, answers) {
     if (studentAnswer === realAnswer) correctCount++;
   }
 
-  const scoreOn20 = Math.round(((correctCount / totalQuestions) * 20) * 100) / 100;
+  // 1 point par réponse correcte sur un total de 10 questions
+  const scoreOn10 = totalQuestions === 10 ? correctCount : Math.round(((correctCount / totalQuestions) * 10) * 10) / 10;
+
+  // Harmonisation de l'en-tête Col F
+  if (rSheet.getRange(1, 6).getValue() !== "Score / 10") {
+    rSheet.getRange(1, 6).setValue("Score / 10");
+  }
 
   rSheet.appendRow([
     new Date(),
@@ -304,13 +371,14 @@ function submitQuiz(studentData, answers) {
     studentData.prenom,
     cls,
     studentData.email.trim().toLowerCase(),
-    scoreOn20,
+    scoreOn10,
     ...studentAnswersRow
   ]);
 
-  return { score: scoreOn20, total: totalQuestions, correct: correctCount };
+  return { score: scoreOn10, total: totalQuestions, correct: correctCount };
 }
 
+// ==================== ENVOI DES CORRIGÉS PAR EMAIL (SUR 10) ====================
 function sendAllCorrections() {
   const props = PropertiesService.getScriptProperties();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -328,7 +396,11 @@ function sendAllCorrections() {
     const studentPrenom = rData[r][2];
     const studentClass = String(rData[r][3] || "GCBAT2").trim().toUpperCase();
     const studentEmail = String(rData[r][4]).trim();
-    const scoreOn20 = rData[r][5];
+    
+    let rawScore = parseFloat(rData[r][5]);
+    // Sécurité rétrocompatible : si une ancienne note sur 20 était restée, conversion sur 10
+    if (rawScore > 10) rawScore = rawScore / 2;
+    const scoreOn10 = isNaN(rawScore) ? 0 : rawScore;
 
     if (!isValidEmail(studentEmail)) continue;
 
@@ -383,7 +455,7 @@ function sendAllCorrections() {
     try {
       MailApp.sendEmail({
         to: studentEmail,
-        subject: `Corrigé QCM [${studentClass}] : ${scoreOn20}/20 - ${studentPrenom} ${studentNom}`,
+        subject: `Corrigé QCM [${studentClass}] : Note ${scoreOn10}/10 - ${studentPrenom} ${studentNom}`,
         htmlBody: `
           <div style="font-family: Arial, sans-serif; max-width: 650px; margin: auto; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; background: #f8fafc;">
             <div style="background-color: #0f172a; color: white; padding: 22px; text-align: center;">
@@ -392,11 +464,11 @@ function sendAllCorrections() {
             </div>
             <div style="padding: 22px;">
               <div style="text-align: center; background: white; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
-                <div style="font-size: 34px; font-weight: bold; color: ${parseFloat(scoreOn20) >= 10 ? '#16a34a' : '#dc2626'};">
-                  ${scoreOn20} / 20
+                <div style="font-size: 34px; font-weight: bold; color: ${scoreOn10 >= 5 ? '#16a34a' : '#dc2626'};">
+                  ${scoreOn10} / 10
                 </div>
                 <div style="color: #64748b; font-size: 14px; margin-top: 4px;">
-                  ${correctCount} réponse(s) exacte(s) sur ${totalQuestions}
+                  ${correctCount} réponse(s) exacte(s) sur ${totalQuestions} (1 pt / question)
                 </div>
               </div>
               ${questionsCardsHtml}
@@ -413,6 +485,7 @@ function sendAllCorrections() {
   return sentCount;
 }
 
+// ==================== STATISTIQUES DASHBOARD ADMIN (SUR 10) ====================
 function getAdminStats(filterClass, targetSheetName) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   
@@ -435,8 +508,16 @@ function getAdminStats(filterClass, targetSheetName) {
     }
   }
 
+  const isLegacyOn20 = (rData[0] && String(rData[0][5]).includes("20"));
+
   const studentsCount = filteredRows.length;
-  const scores = filteredRows.map(r => parseFloat(r[5])).filter(s => !isNaN(s));
+  const scores = filteredRows.map(r => {
+    let s = parseFloat(r[5]);
+    if (isNaN(s)) return null;
+    if (isLegacyOn20 || s > 10) s = s / 2; // Rétrocompatibilité transparente
+    return Math.round(s * 10) / 10;
+  }).filter(s => s !== null);
+
   scores.sort((a, b) => a - b);
 
   const avg = scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2) : "0.00";

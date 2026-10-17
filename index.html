@@ -132,7 +132,7 @@
         </div>
       </div>
 
-      <!-- KPI Dynamiques -->
+      <!-- KPI Dynamiques notés sur 10 -->
       <div class="kpi-grid">
         <div class="kpi-card">
           <div class="kpi-title">Étudiants ayant composé</div>
@@ -140,14 +140,14 @@
         </div>
         <div class="kpi-card">
           <div class="kpi-title">Moyenne de la sélection</div>
-          <div class="kpi-value" id="kpi-average">0.00 / 20</div>
+          <div class="kpi-value" id="kpi-average">0.00 / 10</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-title">Note Médiane</div>
-          <div class="kpi-value" id="kpi-median">0.00 / 20</div>
+          <div class="kpi-value" id="kpi-median">0.00 / 10</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-title">Note Max / Min</div>
+          <div class="kpi-title">Note Max / Min (/10)</div>
           <div class="kpi-value" id="kpi-max-min" style="font-size:24px; margin-top:10px;">0 / 0</div>
         </div>
       </div>
@@ -177,24 +177,22 @@
         if (el) el.style.display = (el.style.display === 'block') ? 'none' : 'block';
       }
 
-      // Clôture manuelle : Déclenche automatiquement le tri par classe et l'envoi des corrigés
       function toggleStatus() {
         if (currentStatus === "OPEN") {
           const confirmClose = confirm(
             "Voulez-vous clôturer ce test maintenant ?\n\n" +
             "⚡ Cela va AUTOMATIQUEMENT :\n" +
-            "1. Trier et archiver les notes dans des onglets séparés par classe.\n" +
-            "2. Envoyer les corrigés par e-mail à chaque étudiant.\n" +
+            "1. Archiver les notes sur 10 dans un onglet étiqueté à la vraie date de composition.\n" +
+            "2. Envoyer les corrigés par e-mail avec les notes sur 10.\n" +
             "3. Vider la feuille 'Reponses' pour la session suivante."
           );
           if (!confirmClose) return;
 
           google.script.run.withSuccessHandler((res) => {
-            alert(`✅ Test clôturé avec succès !\nFeuilles d'archives créées :\n${res.createdSheets}\n\nNouveau module préparé : ${res.nextQuizId}`);
+            alert(`✅ Test clôturé avec succès !\nFeuilles traitées :\n${res.createdSheets}\n\nNouveau module préparé : ${res.nextQuizId}`);
             location.reload();
           }).closeAndProcessSession();
         } else {
-          // Réouverture
           const closeTime = document.getElementById('close-datetime').value;
           const quizId = document.getElementById('quiz-id').value;
           google.script.run.withSuccessHandler(() => {
@@ -213,7 +211,7 @@
       }
 
       function sendEmailsToAll() {
-        if (!confirm("Voulez-vous renvoyer les corrigés détaillés aux étudiants de la feuille actuelle ?")) return;
+        if (!confirm("Voulez-vous envoyer les corrigés notés sur 10 aux étudiants de la feuille actuelle ?")) return;
         const btn = document.getElementById('btn-send-emails');
         btn.innerText = "⏳ Envoi...";
         btn.disabled = true;
@@ -279,8 +277,8 @@
         currentStudentsCount = stats.studentsCount;
 
         document.getElementById('kpi-students').innerText = stats.studentsCount;
-        document.getElementById('kpi-average').innerText = stats.average + " / 20";
-        document.getElementById('kpi-median').innerText = stats.median + " / 20";
+        document.getElementById('kpi-average').innerText = stats.average + " / 10";
+        document.getElementById('kpi-median').innerText = stats.median + " / 10";
         document.getElementById('kpi-max-min').innerText = stats.max + " / " + stats.min;
 
         document.getElementById('questions-container').innerHTML = renderQuestionsHtml(stats.questions);
@@ -334,13 +332,6 @@
       }
 
       window.onload = function() {
-        const targetSheetSelect = document.getElementById('target-sheet');
-        for (let i = 0; i < targetSheetSelect.options.length; i++) {
-          if (targetSheetSelect.options[i].value.includes("GCBAT")) {
-            targetSheetSelect.selectedIndex = i;
-            break;
-          }
-        }
         applyFilters();
         initAdminCountdown();
       };
@@ -356,13 +347,13 @@
         <p style="color:#94a3b8; font-size:15px; line-height:1.6;">
           Ce questionnaire n'accepte plus de réponses.<br>
           La session est terminée ou la date limite est expirée.<br>
-          <span style="color:#38bdf8;">Les corrigés détaillés ont été expédiés par e-mail aux étudiants ayant participé.</span>
+          <span style="color:#38bdf8;">Les corrigés détaillés et les notes sur 10 ont été expédiés par e-mail aux étudiants ayant participé.</span>
         </p>
       </div>
 
     <? } else { ?>
 
-      <!-- Écran de Verrouillage Matériel (localStorage) -->
+      <!-- Écran de Verrouillage Matériel -->
       <div id="locked-device-screen" class="card hidden" style="text-align: center; padding: 40px 25px;">
         <div style="font-size: 55px; margin-bottom: 15px;">🚫</div>
         <h2 style="color: #ef4444; margin: 0 0 10px;">Participation Déjà Enregistrée</h2>
@@ -375,7 +366,7 @@
         </div>
       </div>
 
-      <!-- Écran 1 : Accueil avec Menu Déroulant des Classes -->
+      <!-- Écran 1 : Accueil -->
       <div id="login-screen" class="card">
         <h2 style="margin-top:0; color:#38bdf8; text-align:center;">Évaluation Mathématiques</h2>
         
@@ -385,7 +376,7 @@
         </div>
 
         <div class="alert-rule">
-          ⏱️ <strong>10 secondes par question</strong>. Dès que vous cliquez, vous passez à la suite !<br>
+          ⏱️ <strong>10 secondes par question</strong>. Barème : <strong>10 questions notées sur 10</strong> (1 pt par réponse).<br>
           ⚠️ Une seule participation autorisée sur cet appareil.
         </div>
 
@@ -423,18 +414,18 @@
         <div id="options-container"></div>
       </div>
 
-      <!-- Écran 3 : Résultat immédiat (sans corrigé pour éviter la triche) -->
+      <!-- Écran 3 : Résultat immédiat sur 10 -->
       <div id="result-screen" class="card hidden" style="text-align: center; padding:35px 25px;">
         <div style="font-size:45px; margin-bottom:10px;">🎯</div>
         <h2 style="color: #38bdf8; margin:0 0 10px;">Test Validé !</h2>
         <p style="color:#94a3b8; font-size:14px; margin:0;">Vos réponses ont été enregistrées avec succès.</p>
         
-        <div style="font-size: 45px; margin: 25px 0; font-weight: bold;" id="final-score">-- / 20</div>
+        <div style="font-size: 45px; margin: 25px 0; font-weight: bold;" id="final-score">-- / 10</div>
         <p id="score-details" style="color: #cbd5e1; font-size: 16px; margin:0;"></p>
         
         <div style="margin-top: 25px; padding: 14px; background: rgba(56, 189, 248, 0.1); border: 1px solid #0284c7; border-radius: 8px; font-size: 13px; color: #94a3b8; line-height: 1.5;">
           🔒 <strong>Corrigé officiel :</strong><br>
-          Pour garantir l'équité entre les groupes, le corrigé complet détaillé avec toutes les formules vous sera <strong>automatiquement envoyé par e-mail ce soir à 23h59</strong>.
+          Pour garantir l'équité entre les groupes, le corrigé complet détaillé vous sera <strong>automatiquement envoyé par e-mail ce soir à 23h59</strong>.
         </div>
       </div>
 
@@ -540,7 +531,7 @@
           if (!nom || !prenom || !email) return alert("Veuillez renseigner votre Nom, Prénom et Adresse e-mail !");
 
           if (!isValidEmail(email)) {
-            return alert("Format d'e-mail invalide !\nVeuillez entrer une adresse e-mail correcte avec '@' et un nom de domaine valide (ex: jean@gmail.com).");
+            return alert("Format d'e-mail invalide !\nVeuillez entrer une adresse e-mail correcte (ex: jean@gmail.com).");
           }
 
           const classQuestions = allQuestionsByClass[classe] || allQuestionsByClass["GCBAT2"];
@@ -653,8 +644,8 @@
           google.script.run.withSuccessHandler((result) => {
             if (result.error) return alert(result.error);
             const scoreEl = document.getElementById('final-score');
-            scoreEl.innerText = `${result.score} / 20`;
-            scoreEl.style.color = result.score >= 10 ? '#22c55e' : '#ef4444';
+            scoreEl.innerText = `${result.score} / 10`;
+            scoreEl.style.color = result.score >= 5 ? '#22c55e' : '#ef4444';
             document.getElementById('score-details').innerText = 
               `${result.correct} réponse(s) correcte(s) sur ${result.total}`;
           }).submitQuiz(studentData, studentAnswers);
